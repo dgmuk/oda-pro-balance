@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ODA PRO: Body Balance System</title>
+
+    <!-- CDNs -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Global Error Handler (Non-Babel) -->
+    <script>
+        window.onerror = function (message, source, lineno, colno, error) {
+            document.body.innerHTML = '<div style="color:red; padding:20px; background:white; z-index:9999; position:relative;"><h1>Error</h1><p>' + message + '</p><p>' + source + ':' + lineno + '</p><pre>' + (error ? error.stack : '') + '</pre></div>';
+        };
+        window.addEventListener('unhandledrejection', function (event) {
+            document.body.innerHTML = '<div style="color:red; padding:20px; background:white; z-index:9999; position:relative;"><h1>Unhandled Promise Rejection</h1><p>' + event.reason + '</p></div>';
+        });
+    </script>
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            800: '#1f2937',
+                            900: '#111827',
+                        },
+                        orange: {
+                            500: '#f97316',
+                            600: '#ea580c',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            /* gray-900 */
+            color: #f3f4f6;
+            /* gray-100 */
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background-color: white;
+                color: black;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+
+            .card {
+                break-inside: avoid;
+                border: 1px solid #ddd;
+                box-shadow: none;
+                margin-bottom: 20px;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        .schematic-card svg {
+            display: block;
+        }
+
+        @media print {
+            .schematic-card {
+                break-inside: avoid;
+            }
+            .schematic-card svg {
+                max-height: 150px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- DATA: Exercise Library ---
+        const exerciseLibrary = {
+            // SMR (Inhibit)
+            smr_upper_trap: {
+                name: "МФР: Верхняя трапеция",
+                desc: "Расслабление верхней части трапециевидной мышцы с использованием массажного мяча.",
+                steps: [
+                    "Встаньте у стены, поместите мяч между стеной и верхней частью трапеции (не на позвоночник).",
+                    "Надавите на мяч и медленно прокатывайте его, находя триггерные точки.",
+                    "Задержитесь на болезненной точке на 30-60 секунд.",
+                    "Выполняйте медленные движения рукой (подъем, отведение) для усиления эффекта."
+                ]
+            },
+            smr_pecs: {
+                name: "МФР: Грудные мышцы",
+                desc: "Релиз малой и большой грудных мышц для устранения сутулости.",
+                steps: [
+                    "Встаньте лицом к стене, поместите мяч в область грудной мышцы (ближе к плечу).",
+                    "Надавите весом тела на мяч.",
+                    "Медленно прокатывайте зону, избегая молочных желез.",
+                    "Найдя точку напряжения, задержитесь и сделайте несколько глубоких вдохов."
+                ]
+            },
+            smr_lats: {
+                name: "МФР: Широчайшие мышцы",
+                desc: "Снятие напряжения с широчайших мышц спины.",
+                steps: [
+                    "Лягте на бок, поместите ролл под подмышечную впадину.",
+                    "Медленно прокатывайте ролл вниз до середины ребер и обратно.",
+                    "Разверните корпус немного назад, чтобы проработать заднюю часть.",
+                    "Задержитесь на болевых точках."
+                ]
+            },
+            smr_psoas: {
+                name: "МФР: Подвздошно-поясничная мышца",
+                desc: "Глубокий релиз сгибателей бедра.",
+                steps: [
+                    "Лягте на живот, поместите массажный мяч (или kettlebell) в область паха/низа живота.",
+                    "Осторожно перенесите вес на мяч.",
+                    "Дышите глубоко животом, позволяя мячу проникнуть глубже.",
+                    "Избегайте пульсации (артерий)."
+                ]
+            },
+            smr_quads: {
+                name: "МФР: Квадрицепс",
+                desc: "Прокатка передней поверхности бедра.",
+                steps: [
+                    "Лягте на живот, поместите ролл под бедра.",
+                    "Опираясь на предплечья, прокатывайте от таза до колена.",
+                    "Для усиления давления можно положить одну ногу на другую.",
+                    "На болевой точке согните и разогните колено несколько раз."
+                ]
+            },
+            smr_tfl: {
+                name: "МФР: Напрягатель широкой фасции (TFL)",
+                desc: "Релиз внешней части бедра (карман джинс).",
+                steps: [
+                    "Лягте на бок, поместите ролл или мяч чуть ниже тазовой кости сбоку.",
+                    "Найдите болезненную точку (мышца небольшая).",
+                    "Задержитесь на 30-60 секунд.",
+                    "Двигайтесь очень медленно, амплитуда небольшая."
+                ]
+            },
+            smr_calves: {
+                name: "МФР: Икроножные мышцы",
+                desc: "Расслабление голени.",
+                steps: [
+                    "Сидя на полу, положите ролл под икры.",
+                    "Опираясь на руки, приподнимите таз и прокатывайте голень.",
+                    "Поворачивайте ногу внутрь и наружу для проработки всех пучков.",
+                    "Для давления положите ногу на ногу."
+                ]
+            },
+            smr_adductors: {
+                name: "МФР: Приводящие мышцы",
+                desc: "Релиз внутренней поверхности бедра.",
+                steps: [
+                    "Лягте на живот, отведите одну ногу в сторону и согните в колене.",
+                    "Положите ролл под внутреннюю часть бедра.",
+                    "Прокатывайте от колена к паху.",
+                    "Будьте осторожны ближе к паховой области."
+                ]
+            },
+            smr_hamstrings: {
+                name: "МФР: Задняя поверхность бедра",
+                desc: "Релиз хамстрингов для восстановления положения таза и амплитуды ASLR.",
+                steps: [
+                    "Сядьте на ролл так, чтобы он оказался под седалищным бугром.",
+                    "Опираясь на руки, прокатывайте заднюю поверхность бедра до зоны выше колена.",
+                    "Не давите на подколенную ямку.",
+                    "На болезненной точке задержитесь 30-60 секунд, можно слегка вращать ногу."
+                ]
+            },
+
+            // Stretch (Lengthen)
+            stretch_neck_side: {
+                name: "Растяжка шеи (Боковая)",
+                desc: "Удлинение верхней трапеции и лестничных мышц.",
+                steps: [
+                    "Сидя или стоя, опустите одно плечо вниз (можно держаться за стул).",
+                    "Мягко наклоните голову в противоположную сторону.",
+                    "Положите руку на голову для легкого давления (не тяните сильно).",
+                    "Удерживайте 30-45 секунд."
+                ]
+            },
+            stretch_doorway_pec: {
+                name: "Растяжка грудных в проеме",
+                desc: "Раскрытие грудного отдела.",
+                steps: [
+                    "Встаньте в дверном проеме, упритесь предплечьями в косяки (локти на уровне плеч или чуть выше).",
+                    "Сделайте шаг вперед одной ногой, оставляя руки на месте.",
+                    "Почувствуйте растяжение в груди.",
+                    "Держите спину ровно, не прогибайтесь в пояснице."
+                ]
+            },
+            stretch_lats: {
+                name: "Растяжка широчайших (Prayer Stretch)",
+                desc: "Удлинение спины.",
+                steps: [
+                    "Встаньте на колени перед опорой (стул, диван, фитбол).",
+                    "Положите руки на опору и опустите корпус вниз, проваливаясь грудью к полу.",
+                    "Тянитесь тазом назад к пяткам.",
+                    "Удерживайте 30-60 секунд."
+                ]
+            },
+            stretch_hip_flexor: {
+                name: "Растяжка сгибателей бедра",
+                desc: "Растяжка подвздошно-поясничной мышцы.",
+                steps: [
+                    "Встаньте на одно колено (подложите мягкое).",
+                    "Подкрутите таз на себя (уберите прогиб в пояснице).",
+                    "Слегка подайтесь корпусом вперед, сохраняя таз подкрученным.",
+                    "Поднимите руку со стороны задней ноги вверх и наклонитесь в противоположную сторону."
+                ]
+            },
+            stretch_quad_stand: {
+                name: "Растяжка квадрицепса стоя",
+                desc: "Удлинение передней поверхности бедра.",
+                steps: [
+                    "Стоя, согните одну ногу в колене и захватите стопу рукой.",
+                    "Прижмите пятку к ягодице.",
+                    "Колено направлено строго вниз, таз подкручен.",
+                    "Не прогибайтесь в пояснице."
+                ]
+            },
+            stretch_calf_wall: {
+                name: "Растяжка икры у стены",
+                desc: "Удлинение икроножной мышцы.",
+                steps: [
+                    "Упритесь руками в стену.",
+                    "Отставьте одну ногу назад, пятка прижата к полу, нога прямая.",
+                    "Подайтесь тазом вперед, не отрывая пятку.",
+                    "Почувствуйте натяжение в голени."
+                ]
+            },
+            stretch_adductor_stand: {
+                name: "Растяжка приводящих стоя",
+                desc: "Удлинение внутренней поверхности бедра.",
+                steps: [
+                    "Широкая постановка ног.",
+                    "Перенесите вес на одну ногу, сгибая ее в колене.",
+                    "Вторая нога прямая.",
+                    "Держите спину ровно, таз назад."
+                ]
+            },
+            stretch_hamstring_supine: {
+                name: "Растяжка хамстрингов лёжа",
+                desc: "Удлинение задней поверхности бедра без потери нейтрали поясницы.",
+                steps: [
+                    "Лягте на спину, вторую ногу оставьте прямой на полу.",
+                    "Накиньте ремень или полотенце на стопу рабочей ноги.",
+                    "Поднимите прямую ногу до натяжения задней поверхности бедра.",
+                    "Поясница прижата к полу, не тяните через боль. Удерживайте 30-45 секунд."
+                ]
+            },
+
+            // Activate (Isolation)
+            act_chin_tuck: {
+                name: "Ретракция шеи (Chin Tucks)",
+                desc: "Активация глубоких сгибателей шеи.",
+                steps: [
+                    "Стоя или сидя, смотрите прямо перед собой.",
+                    "Движением 'задвиньте' подбородок назад, создавая 'двойной подбородок'.",
+                    "Не наклоняйте голову вниз или вверх.",
+                    "Удерживайте 2-3 секунды, повторите 10-15 раз."
+                ]
+            },
+            act_ytw: {
+                name: "Упражнение Y-T-W",
+                desc: "Активация нижней трапеции и ромбовидных мышц.",
+                steps: [
+                    "Лягте на живот на пол или наклонную скамью.",
+                    "Поднимите руки в форме буквы Y (большие пальцы вверх).",
+                    "Затем разведите в стороны (T).",
+                    "Затем согните локти и сведите лопатки (W).",
+                    "Держите лопатки сведенными в каждой позиции."
+                ]
+            },
+            act_glute_bridge: {
+                name: "Ягодичный мост",
+                desc: "Изолированная работа ягодиц.",
+                steps: [
+                    "Лягте на спину, ноги согнуты, стопы на полу.",
+                    "Поднимите таз вверх, сжимая ягодицы.",
+                    "В верхней точке тело образует прямую линию.",
+                    "Не переразгибайте поясницу. Опуститесь вниз."
+                ]
+            },
+            act_plank_rkc: {
+                name: "Планка RKC",
+                desc: "Активная планка с максимальным напряжением.",
+                steps: [
+                    "Встаньте в планку на предплечьях.",
+                    "Сильно сожмите кулаки, напрягите пресс, ягодицы и квадрицепсы.",
+                    "Тяните локти к носкам, а носки к локтям (создавая изометрическое напряжение).",
+                    "Держите 10-20 секунд максимального напряжения."
+                ]
+            },
+            act_clamshell: {
+                name: "Ракушка (Clamshells)",
+                desc: "Активация средней ягодичной мышцы.",
+                steps: [
+                    "Лягте на бок, ноги согнуты под 90 градусов.",
+                    "Не разворачивая таз, поднимите колено верхней ноги вверх.",
+                    "Стопы остаются прижатыми друг к другу.",
+                    "Почувствуйте жжение в боковой части ягодицы."
+                ]
+            },
+            act_tibialis: {
+                name: "Подъем носков (Tibialis Raise)",
+                desc: "Укрепление передней большеберцовой мышцы.",
+                steps: [
+                    "Встаньте спиной к стене, отступив ногами на полшага.",
+                    "Опираясь спиной о стену, поднимайте носки на себя.",
+                    "Плавно опускайте.",
+                    "Повторяйте до утомления."
+                ]
+            },
+            act_bird_dog: {
+                name: "Bird Dog",
+                desc: "Активация разгибателей спины и глубокого кора без компрессии поясницы.",
+                steps: [
+                    "Встаньте на четвереньки, поясница в нейтрали, взгляд в пол.",
+                    "Одновременно вытяните противоположные руку и ногу до линии тела.",
+                    "Таз не вращается, рёбра не проваливаются.",
+                    "Удерживайте 3 секунды, вернитесь и смените сторону. 6-8 повторений на сторону."
+                ]
+            },
+
+            // Integrate (Functional)
+            int_single_arm_row: {
+                name: "Тяга одной рукой в наклоне",
+                desc: "Интеграция спины и кора.",
+                steps: [
+                    "Возьмите гантель или резину.",
+                    "Встаньте в выпад или наклон.",
+                    "Тяните снаряд к поясу, сводя лопатку.",
+                    "Корпус держите стабильно, не скручивайтесь."
+                ]
+            },
+            int_squat_row: {
+                name: "Присед с тягой",
+                desc: "Функциональное объединение низа и верха.",
+                steps: [
+                    "Используйте резиновый эспандер, закрепленный перед вами.",
+                    "Выполните присед, выпрямляя руки вперед.",
+                    "Вставая, выполните тягу руками к поясу.",
+                    "Движение должно быть слитным."
+                ]
+            },
+            int_lunge_rot: {
+                name: "Выпад с ротацией",
+                desc: "Стабилизация и мобильность.",
+                steps: [
+                    "Сделайте шаг назад в выпад.",
+                    "В нижней точке поверните корпус в сторону передней ноги.",
+                    "Вернитесь в центр и встаньте.",
+                    "Держите равновесие."
+                ]
+            },
+            int_single_leg_balance: {
+                name: "Баланс на одной ноге",
+                desc: "Тренировка проприоцепции и стабилизаторов.",
+                steps: [
+                    "Встаньте на одну ногу, колено чуть мягкое.",
+                    "Держите баланс 30-60 секунд.",
+                    "Усложнение: закройте глаза или вращайте головой.",
+                    "Следите, чтобы колено не заваливалось внутрь."
+                ]
+            },
+            int_multi_lunge: {
+                name: "Мульти-плоскостные выпады",
+                desc: "Работа во всех плоскостях.",
+                steps: [
+                    "Выполняйте выпады: вперед, в сторону, назад.",
+                    "Следите за соосностью колена и стопы.",
+                    "Держите спину прямой."
+                ]
+            }
+        };
+
+        // --- VISUAL SYSTEM ---
+
+        const V = {
+            ink: '#9ca3af',
+            heat: '#f97316',
+            heatFill: 'rgba(249,115,22,0.32)',
+            teal: '#2dd4bf',
+            tealFill: 'rgba(45,212,191,0.32)',
+            ok: '#34d399',
+            bad: '#f87171',
+            gear: '#f3f4f6',
+            wall: '#6b7280',
+            ground: '#374151'
+        };
+
+        const limb = (x1, y1, x2, y2, color = V.ink, w = 3.3) => (
+            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={w} strokeLinecap="round" />
+        );
+
+        const Schematic = ({ caption, children, badge }) => (
+            <div className="schematic-card rounded-xl bg-gray-900/80 border border-gray-700 overflow-hidden print:bg-white print:border-gray-300">
+                {badge && (
+                    <div className={`text-[10px] font-bold uppercase tracking-wider text-center py-1 ${badge === 'ok' ? 'bg-emerald-500/20 text-emerald-400 print:text-emerald-700' : 'bg-red-500/20 text-red-400 print:text-red-700'}`}>
+                        {badge === 'ok' ? 'Норма' : 'Ошибка'}
+                    </div>
+                )}
+                <svg viewBox="0 0 200 168" className="w-full h-auto block">{children}</svg>
+                {caption && <p className="text-[11px] leading-snug text-gray-400 text-center px-2 pb-2 print:text-gray-600">{caption}</p>}
+            </div>
+        );
+
+        const Ground = () => <line x1="28" y1="152" x2="172" y2="152" stroke={V.ground} strokeWidth="2" />;
+        const WallV = ({ x = 168 }) => <line x1={x} y1="18" x2={x} y2="152" stroke={V.wall} strokeWidth="6" strokeLinecap="round" />;
+        const Ball = ({ x, y, r = 8 }) => <circle cx={x} cy={y} r={r} fill={V.gear} stroke={V.heat} strokeWidth="1.5" />;
+        const Roller = ({ x, y, w = 46, h = 12 }) => <rect x={x} y={y} width={w} height={h} rx="6" fill={V.gear} stroke={V.heat} strokeWidth="1.4" />;
+        const Heat = ({ cx, cy, rx = 12, ry = 10 }) => <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={V.heatFill} />;
+        const Arrow = ({ x1, y1, x2, y2, color = V.heat }) => {
+            const a = Math.atan2(y2 - y1, x2 - x1);
+            const x3 = x2 - 7 * Math.cos(a - 0.45);
+            const y3 = y2 - 7 * Math.sin(a - 0.45);
+            const x4 = x2 - 7 * Math.cos(a + 0.45);
+            const y4 = y2 - 7 * Math.sin(a + 0.45);
+            return (
+                <g>
+                    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="2" />
+                    <polygon points={`${x2},${y2} ${x3},${y3} ${x4},${y4}`} fill={color} />
+                </g>
+            );
+        };
+
+        const SideBody = ({
+            color = V.ink,
+            headFwd = 0,
+            roundSh = 0,
+            pelvis = 0,
+            lean = 0,
+            squat = 0,
+            arms = 'down',
+            heel = 0,
+            arch = 0,
+            ox = 0
+        }) => {
+            const ax = 96 + ox, ay = 152 - heel * 12;
+            const kx = ax + 6 + squat * 26;
+            const ky = 112 + squat * 6 - heel * 4;
+            const hx = ax - 4 - squat * 16 - pelvis * 10 + lean * 4;
+            const hy = 74 + squat * 20;
+            const sx = hx + lean * 24 + roundSh * 10;
+            const sy = hy - 38 + squat * 6;
+            const cx = sx + 3 + headFwd * 14;
+            const cy = sy - 20;
+            const lx = (hx + sx) / 2 + arch * -8;
+            const ly = (hy + sy) / 2;
+            let arm = null;
+            if (arms === 'up') arm = limb(sx, sy, sx + 2 + lean * 6, sy - 42, color, 3);
+            else if (arms === 'fall') arm = limb(sx, sy, sx + 30, sy + 6, color, 3);
+            else arm = limb(sx, sy, sx + 8, sy + 34, color, 3);
+            return (
+                <g>
+                    <circle cx={cx} cy={cy} r={10} stroke={color} strokeWidth="2.4" fill="none" />
+                    {limb(cx, cy + 10, sx, sy, color, 2.5)}
+                    {limb(sx, sy, lx, ly, color)}
+                    {limb(lx, ly, hx, hy, color)}
+                    {arm}
+                    {limb(hx, hy, kx, ky, color)}
+                    {limb(kx, ky, ax, ay, color)}
+                    <line x1={ax - 9} y1={ay} x2={ax + 13} y2={ay} stroke={color} strokeWidth="3" strokeLinecap="round" />
+                </g>
+            );
+        };
+
+        const FrontBody = ({ color = V.ink, valgus = 0, feetOut = 0, shift = 0, squat = 0, arms = 'down' }) => {
+            const s = shift * 14;
+            const hx = 100 + s, hy = 70 + squat * 16;
+            const sx = hx, sy = hy - 36;
+            const headY = sy - 20;
+            const kL = 88 + s - valgus * 16, kR = 112 + s + valgus * 16, kY = 112 + squat * 8;
+            const aL = 90 + s - feetOut * 14, aR = 110 + s + feetOut * 14, aY = 150;
+            const hipL = 90 + s, hipR = 110 + s;
+            let armL, armR;
+            if (arms === 'up') {
+                armL = limb(sx - 8, sy, sx - 28, sy - 38, color, 3);
+                armR = limb(sx + 8, sy, sx + 28, sy - 38, color, 3);
+            } else {
+                armL = limb(sx - 8, sy, sx - 22, sy + 36, color, 3);
+                armR = limb(sx + 8, sy, sx + 22, sy + 36, color, 3);
+            }
+            return (
+                <g>
+                    <circle cx={hx} cy={headY} r={10} stroke={color} strokeWidth="2.4" fill="none" />
+                    {limb(hx, headY + 10, sx, sy, color, 2.5)}
+                    {limb(sx, sy, hx, hy, color)}
+                    {armL}{armR}
+                    {limb(hipL, hy, kL, kY, color)}
+                    {limb(hipR, hy, kR, kY, color)}
+                    {limb(kL, kY, aL, aY, color)}
+                    {limb(kR, kY, aR, aY, color)}
+                    <line x1={aL - 8} y1={aY} x2={aL + 8} y2={aY} stroke={color} strokeWidth="3" strokeLinecap="round" />
+                    <line x1={aR - 8} y1={aY} x2={aR + 8} y2={aY} stroke={color} strokeWidth="3" strokeLinecap="round" />
+                </g>
+            );
+        };
+
+        const Plumb = ({ x = 108 }) => (
+            <line x1={x} y1="18" x2={x} y2="152" stroke="#4b5563" strokeWidth="1" strokeDasharray="3 4" />
+        );
+
+        const EX_CAPTION = {
+            smr_upper_trap: 'Мяч между стеной и верхом трапеции, не на позвоночник',
+            smr_pecs: 'Мяч на грудной мышце у стены, ближе к плечу',
+            smr_lats: 'На боку, ролл от подмышки до середины рёбер',
+            smr_psoas: 'На животе, мяч в зоне паха / низа живота',
+            smr_quads: 'На животе, ролл от таза до колена',
+            smr_tfl: 'На боку, ролл чуть ниже гребня таза',
+            smr_calves: 'Сидя, ролл под икрой, таз приподнят',
+            smr_adductors: 'На животе, нога в сторону, ролл по внутренней поверхности',
+            smr_hamstrings: 'Сидя на ролле, прокат от седалища до колена',
+            stretch_neck_side: 'Плечо вниз, наклон головы в сторону, без рывка',
+            stretch_doorway_pec: 'Предплечья на косяке, шаг вперёд, поясница нейтраль',
+            stretch_lats: 'На коленях, руки на опоре, грудь к полу',
+            stretch_hip_flexor: 'Выпад на колене, таз подкручен, рука вверх',
+            stretch_quad_stand: 'Пятка к ягодице, колено вниз, таз подкручен',
+            stretch_calf_wall: 'Задняя нога прямая, пятка в пол',
+            stretch_adductor_stand: 'Широкая стойка, вес на согнутую ногу',
+            stretch_hamstring_supine: 'На спине, прямая нога вверх, поясница прижата',
+            act_chin_tuck: 'Подбородок назад, взгляд прямо, без кивка вниз',
+            act_ytw: 'На животе, руки Y → T → W, лопатки собраны',
+            act_glute_bridge: 'Мост: линия плечи–бёдра–колени, без прогиба',
+            act_plank_rkc: 'Планка на предплечьях, всё тело в тонусе',
+            act_clamshell: 'На боку, стопы вместе, колено вверх без разворота таза',
+            act_tibialis: 'Спина к стене, носки на себя',
+            act_bird_dog: 'Противоположные рука и нога, таз не вращается',
+            int_single_arm_row: 'Наклон, тяга к поясу, корпус не крутится',
+            int_squat_row: 'Присед с руками вперёд, на подъёме тяга',
+            int_lunge_rot: 'Выпад назад, ротация к передней ноге',
+            int_single_leg_balance: 'Одна нога, колено мягкое, не валится внутрь',
+            int_multi_lunge: 'Выпады вперёд, в сторону, назад'
+        };
+
+        const EX_DRAW = {
+            smr_upper_trap: () => (<g><Ground /><WallV /><Heat cx={132} cy={48} rx={16} ry={12} /><SideBody roundSh={0.2} ox={8} /><Ball x={148} y={50} /></g>),
+            smr_pecs: () => (<g><Ground /><WallV /><Heat cx={148} cy={58} rx={14} ry={12} /><SideBody ox={20} /><Ball x={158} y={58} /></g>),
+            smr_lats: () => (<g><Heat cx={100} cy={78} rx={22} ry={16} /><ellipse cx="88" cy="90" rx="28" ry="12" stroke={V.ink} strokeWidth="3" fill="none" /><circle cx="70" cy="88" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="110" y1="90" x2="150" y2="96" stroke={V.ink} strokeWidth="3.2" strokeLinecap="round" /><line x1="108" y1="92" x2="130" y2="128" stroke={V.ink} strokeWidth="3.2" strokeLinecap="round" /><Roller x={86} y={98} w={40} h={11} /></g>),
+            smr_psoas: () => (<g><Heat cx={100} cy={88} rx={14} ry={12} /><line x1="48" y1="80" x2="150" y2="80" stroke={V.ink} strokeWidth="3.3" strokeLinecap="round" /><circle cx="40" cy="78" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="150" y1="80" x2="168" y2="108" stroke={V.ink} strokeWidth="3" strokeLinecap="round" /><Ball x={100} y={96} /></g>),
+            smr_quads: () => (<g><Heat cx={108} cy={86} rx={24} ry={12} /><line x1="48" y1="78" x2="152" y2="78" stroke={V.ink} strokeWidth="3.3" strokeLinecap="round" /><circle cx="40" cy="76" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><Roller x={86} y={88} /></g>),
+            smr_tfl: () => (<g><Heat cx={102} cy={80} rx={16} ry={14} /><ellipse cx="96" cy="88" rx="26" ry="11" stroke={V.ink} strokeWidth="3" fill="none" /><circle cx="72" cy="86" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="118" y1="90" x2="150" y2="118" stroke={V.ink} strokeWidth="3.2" strokeLinecap="round" /><Roller x={88} y={96} w={36} /></g>),
+            smr_calves: () => (<g><Heat cx={118} cy={118} rx={18} ry={10} /><circle cx="58" cy="70" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="66" y1="76" x2="78" y2="108" stroke={V.ink} strokeWidth="3" /><line x1="78" y1="108" x2="150" y2="108" stroke={V.ink} strokeWidth="3.3" strokeLinecap="round" /><Roller x={100} y={116} w={40} /></g>),
+            smr_adductors: () => (<g><Heat cx={112} cy={100} rx={16} ry={12} /><line x1="50" y1="78" x2="130" y2="78" stroke={V.ink} strokeWidth="3.3" strokeLinecap="round" /><circle cx="42" cy="76" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="110" y1="78" x2="148" y2="118" stroke={V.ink} strokeWidth="3.2" strokeLinecap="round" /><Roller x={108} y={88} w={34} /></g>),
+            smr_hamstrings: () => (<g><Heat cx={108} cy={100} rx={18} ry={12} /><circle cx="60" cy="58" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="68" y1="66" x2="88" y2="92" stroke={V.ink} strokeWidth="3" /><line x1="88" y1="92" x2="150" y2="96" stroke={V.ink} strokeWidth="3.3" strokeLinecap="round" /><Roller x={90} y={98} /></g>),
+            stretch_neck_side: () => (<g><Ground /><Heat cx={108} cy={28} rx={14} ry={12} /><SideBody /><circle cx="109" cy="26" r="10" stroke={V.heat} strokeWidth="2.4" fill="none" /><Arrow x1={122} y1={22} x2={136} y2={36} /></g>),
+            stretch_doorway_pec: () => (<g><Heat cx={100} cy={58} rx={20} ry={14} /><line x1="48" y1="20" x2="48" y2="152" stroke={V.wall} strokeWidth="5" /><line x1="152" y1="20" x2="152" y2="152" stroke={V.wall} strokeWidth="5" /><Ground /><FrontBody /><line x1="78" y1="58" x2="48" y2="58" stroke={V.ink} strokeWidth="3.2" strokeLinecap="round" /><line x1="122" y1="58" x2="152" y2="58" stroke={V.ink} strokeWidth="3.2" strokeLinecap="round" /></g>),
+            stretch_lats: () => (<g><Heat cx={100} cy={70} rx={28} ry={16} /><line x1="40" y1="48" x2="160" y2="48" stroke={V.wall} strokeWidth="5" /><circle cx="70" cy="92" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="78" y1="88" x2="100" y2="118" stroke={V.ink} strokeWidth="3.2" /><line x1="100" y1="118" x2="130" y2="118" stroke={V.ink} strokeWidth="3.2" /><line x1="78" y1="86" x2="110" y2="52" stroke={V.ink} strokeWidth="3.2" /><line x1="110" y1="52" x2="148" y2="52" stroke={V.ink} strokeWidth="3.2" /></g>),
+            stretch_hip_flexor: () => (<g><Ground /><Heat cx={92} cy={92} rx={14} ry={16} /><circle cx="108" cy="36" r="10" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="108" y1="46" x2="104" y2="82" stroke={V.ink} strokeWidth="3.2" /><line x1="104" y1="82" x2="78" y2="118" stroke={V.ink} strokeWidth="3.2" /><line x1="78" y1="118" x2="62" y2="150" stroke={V.ink} strokeWidth="3.2" /><line x1="104" y1="82" x2="132" y2="150" stroke={V.ink} strokeWidth="3.2" /><line x1="108" y1="50" x2="108" y2="18" stroke={V.heat} strokeWidth="3" strokeLinecap="round" /><Arrow x1={118} y1={70} x2={138} y2={58} /></g>),
+            stretch_quad_stand: () => (<g><Ground /><Heat cx={118} cy={110} rx={12} ry={18} /><SideBody ox={-8} /><path d="M88 74 Q130 90 118 138" stroke={V.heat} strokeWidth="3.2" fill="none" strokeLinecap="round" /></g>),
+            stretch_calf_wall: () => (<g><Ground /><WallV /><Heat cx={78} cy={128} rx={12} ry={16} /><SideBody lean={0.45} ox={-10} /></g>),
+            stretch_adductor_stand: () => (<g><Ground /><Heat cx={70} cy={120} rx={16} ry={12} /><circle cx="100" cy="32" r="10" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="100" y1="42" x2="100" y2="78" stroke={V.ink} strokeWidth="3.2" /><line x1="100" y1="78" x2="70" y2="118" stroke={V.ink} strokeWidth="3.2" /><line x1="70" y1="118" x2="58" y2="150" stroke={V.ink} strokeWidth="3.2" /><line x1="100" y1="78" x2="148" y2="150" stroke={V.heat} strokeWidth="3.2" /></g>),
+            stretch_hamstring_supine: () => (<g><Heat cx={128} cy={70} rx={14} ry={22} /><line x1="40" y1="110" x2="130" y2="110" stroke={V.ink} strokeWidth="3.3" strokeLinecap="round" /><circle cx="36" cy="108" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="110" y1="110" x2="132" y2="42" stroke={V.heat} strokeWidth="3.3" strokeLinecap="round" /><Arrow x1={148} y1={70} x2={148} y2={40} /></g>),
+            act_chin_tuck: () => (<g><Plumb x={112} /><Ground /><SideBody /><circle cx="111" cy="24" r="10" stroke={V.heat} strokeWidth="2.4" fill="none" /><Arrow x1={128} y1={26} x2={114} y2={26} /></g>),
+            act_ytw: () => (<g><Heat cx={100} cy={70} rx={36} ry={14} /><line x1="50" y1="88" x2="150" y2="88" stroke={V.ink} strokeWidth="3.2" /><circle cx="100" cy="86" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="100" y1="86" x2="62" y2="48" stroke={V.heat} strokeWidth="3.2" /><line x1="100" y1="86" x2="138" y2="48" stroke={V.heat} strokeWidth="3.2" /></g>),
+            act_glute_bridge: () => (<g><Heat cx={108} cy={78} rx={16} ry={12} /><line x1="44" y1="110" x2="88" y2="70" stroke={V.ink} strokeWidth="3.3" strokeLinecap="round" /><line x1="88" y1="70" x2="140" y2="70" stroke={V.ink} strokeWidth="3.3" strokeLinecap="round" /><line x1="140" y1="70" x2="152" y2="118" stroke={V.ink} strokeWidth="3.3" strokeLinecap="round" /><circle cx="40" cy="112" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /></g>),
+            act_plank_rkc: () => (<g><Heat cx={100} cy={78} rx={40} ry={12} /><line x1="52" y1="88" x2="156" y2="88" stroke={V.ink} strokeWidth="3.4" strokeLinecap="round" /><circle cx="44" cy="86" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="58" y1="88" x2="52" y2="118" stroke={V.ink} strokeWidth="3" /><line x1="156" y1="88" x2="160" y2="118" stroke={V.ink} strokeWidth="3" /></g>),
+            act_clamshell: () => (<g><Heat cx={118} cy={78} rx={16} ry={14} /><ellipse cx="90" cy="96" rx="30" ry="11" stroke={V.ink} strokeWidth="3" fill="none" /><circle cx="62" cy="94" r="9" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="112" y1="92" x2="148" y2="92" stroke={V.ink} strokeWidth="3" /><line x1="112" y1="90" x2="140" y2="58" stroke={V.heat} strokeWidth="3.2" /><Arrow x1={150} y1={78} x2={150} y2={52} /></g>),
+            act_tibialis: () => (<g><Ground /><WallV x={48} /><Heat cx={118} cy={148} rx={16} ry={8} /><SideBody ox={10} /><Arrow x1={130} y1={148} x2={130} y2={132} /></g>),
+            act_bird_dog: () => (<g><Heat cx={100} cy={88} rx={18} ry={12} /><line x1="70" y1="100" x2="130" y2="100" stroke={V.ink} strokeWidth="3.3" /><circle cx="100" cy="98" r="8" stroke={V.ink} strokeWidth="2.3" fill="none" /><line x1="70" y1="100" x2="46" y2="78" stroke={V.heat} strokeWidth="3.2" /><line x1="130" y1="100" x2="158" y2="78" stroke={V.heat} strokeWidth="3.2" /><line x1="78" y1="100" x2="72" y2="124" stroke={V.ink} strokeWidth="3" /><line x1="122" y1="100" x2="128" y2="124" stroke={V.ink} strokeWidth="3" /></g>),
+            int_single_arm_row: () => (<g><Ground /><Heat cx={92} cy={58} rx={14} ry={12} /><SideBody lean={0.7} ox={-6} /><line x1="118" y1="58" x2="118" y2="86" stroke={V.gear} strokeWidth="3" /><circle cx="118" cy="92" r="6" fill={V.heat} /></g>),
+            int_squat_row: () => (<g><Ground /><Heat cx={100} cy={80} rx={16} ry={14} /><FrontBody squat={0.8} arms="up" /></g>),
+            int_lunge_rot: () => (<g><Ground /><Heat cx={100} cy={70} rx={18} ry={14} /><circle cx="108" cy="32" r="10" stroke={V.ink} strokeWidth="2.4" fill="none" /><line x1="108" y1="42" x2="100" y2="80" stroke={V.ink} strokeWidth="3.2" /><line x1="100" y1="80" x2="72" y2="150" stroke={V.ink} strokeWidth="3.2" /><line x1="100" y1="80" x2="132" y2="118" stroke={V.ink} strokeWidth="3.2" /><line x1="132" y1="118" x2="140" y2="150" stroke={V.ink} strokeWidth="3.2" /><line x1="100" y1="56" x2="138" y2="48" stroke={V.heat} strokeWidth="3" /></g>),
+            int_single_leg_balance: () => (<g><Ground /><Heat cx={112} cy={112} rx={12} ry={14} /><SideBody ox={0} /><line x1="96" y1="74" x2="128" y2="90" stroke={V.ink} strokeWidth="3" strokeLinecap="round" /></g>),
+            int_multi_lunge: () => (<g><Ground /><FrontBody /><Arrow x1={100} y1={150} x2={100} y2={128} /><Arrow x1={100} y1={150} x2={70} y2={136} /><Arrow x1={100} y1={150} x2={130} y2={136} /></g>)
+        };
+
+        const ExDiagram = ({ id }) => {
+            const draw = EX_DRAW[id];
+            if (!draw) return null;
+            return <Schematic caption={EX_CAPTION[id]}>{draw()}</Schematic>;
+        };
+
+        const TEST_DIAGRAMS = {
+            forward_head: {
+                okLabel: 'Мочка уха над плечом',
+                badLabel: 'Голова впереди вертикали',
+                ok: () => (<g><Plumb x={110} /><Ground /><SideBody /></g>),
+                bad: () => (<g><Plumb x={110} /><Ground /><SideBody headFwd={1} color={V.bad} /></g>)
+            },
+            rounded_shoulders: {
+                okLabel: 'Плечо над грудной клеткой',
+                badLabel: 'Плечо ушло вперёд, ладони назад',
+                ok: () => (<g><Plumb x={108} /><Ground /><SideBody /></g>),
+                bad: () => (<g><Plumb x={108} /><Ground /><SideBody roundSh={1} color={V.bad} /></g>)
+            },
+            hyperlordosis: {
+                okLabel: 'Нейтраль таза, мягкий лордоз',
+                badLabel: 'Передний наклон, живот вперёд',
+                ok: () => (<g><Ground /><SideBody /></g>),
+                bad: () => (<g><Ground /><SideBody pelvis={1} arch={1} color={V.bad} /></g>)
+            },
+            flat_back: {
+                okLabel: 'Есть поясничный изгиб',
+                badLabel: 'Таз подкручен, спина плоская',
+                ok: () => (<g><Ground /><SideBody /></g>),
+                bad: () => (<g><Ground /><SideBody pelvis={-1} color={V.bad} /></g>)
+            },
+            knee_valgus_static: {
+                okLabel: 'Колено над вторым пальцем',
+                badLabel: 'Колени сходятся (X)',
+                ok: () => (<g><Ground /><FrontBody /></g>),
+                bad: () => (<g><Ground /><FrontBody valgus={1} color={V.bad} /></g>)
+            },
+            flat_feet: {
+                okLabel: 'Свод стопы сохранён',
+                badLabel: 'Свод свален внутрь',
+                ok: () => (<g><Ground /><FrontBody /><path d="M82 150 Q90 142 98 150" stroke={V.ok} strokeWidth="2.4" fill="none" /></g>),
+                bad: () => (<g><Ground /><FrontBody color={V.bad} /><line x1="82" y1="152" x2="100" y2="152" stroke={V.bad} strokeWidth="3" /></g>)
+            },
+            feet_turn_out: {
+                okLabel: 'Носки примерно вперёд',
+                badLabel: 'Носки разъезжаются наружу',
+                ok: () => (<g><Ground /><FrontBody squat={0.7} arms="up" /></g>),
+                bad: () => (<g><Ground /><FrontBody squat={0.7} arms="up" feetOut={1} color={V.bad} /></g>)
+            },
+            knees_cave_in: {
+                okLabel: 'Колени над стопой',
+                badLabel: 'Колени проваливаются внутрь',
+                ok: () => (<g><Ground /><FrontBody squat={0.85} arms="up" /></g>),
+                bad: () => (<g><Ground /><FrontBody squat={0.85} arms="up" valgus={1} color={V.bad} /></g>)
+            },
+            excessive_lean: {
+                okLabel: 'Голень и корпус параллельны',
+                badLabel: 'Корпус сильно падает вперёд',
+                ok: () => (<g><Ground /><SideBody squat={0.85} arms="up" lean={0.15} /></g>),
+                bad: () => (<g><Ground /><SideBody squat={0.85} arms="up" lean={1} color={V.bad} /></g>)
+            },
+            low_back_arch: {
+                okLabel: 'Поясница нейтральна внизу',
+                badLabel: 'Гиперэкстензия, таз вперёд',
+                ok: () => (<g><Ground /><SideBody squat={0.8} arms="up" /></g>),
+                bad: () => (<g><Ground /><SideBody squat={0.8} arms="up" arch={1} pelvis={0.8} color={V.bad} /></g>)
+            },
+            arms_fall: {
+                okLabel: 'Руки в линии с туловищем',
+                badLabel: 'Руки падают вперёд',
+                ok: () => (<g><Ground /><SideBody squat={0.7} arms="up" /></g>),
+                bad: () => (<g><Ground /><SideBody squat={0.7} arms="fall" color={V.bad} /></g>)
+            },
+            heels_rise: {
+                okLabel: 'Пятки прижаты',
+                badLabel: 'Пятки отрываются',
+                ok: () => (<g><Ground /><SideBody squat={0.8} arms="up" /></g>),
+                bad: () => (<g><Ground /><SideBody squat={0.8} arms="up" heel={1} color={V.bad} /></g>)
+            },
+            asym_shift: {
+                okLabel: 'Таз по центру',
+                badLabel: 'Вес уезжает в сторону',
+                ok: () => (<g><Ground /><FrontBody squat={0.75} arms="up" /></g>),
+                bad: () => (<g><Ground /><FrontBody squat={0.75} arms="up" shift={1} color={V.bad} /></g>)
+            },
+            neck_restrict: {
+                okLabel: 'Подбородок к грудине',
+                badLabel: 'Подбородок не доходит',
+                ok: () => (<g><SideBody /><circle cx="108" cy="28" r="10" stroke={V.ok} strokeWidth="2.4" fill="none" /><path d="M108 38 Q108 52 100 58" stroke={V.ok} strokeWidth="2.6" fill="none" /></g>),
+                bad: () => (<g><SideBody color={V.bad} /><circle cx="118" cy="22" r="10" stroke={V.bad} strokeWidth="2.4" fill="none" /></g>)
+            },
+            apley_fail: {
+                okLabel: 'Пальцы встречаются за спиной',
+                badLabel: 'Между руками зазор',
+                ok: () => (<g><Ground /><FrontBody /><path d="M78 58 Q100 90 122 120" stroke={V.ok} strokeWidth="3" fill="none" /><path d="M122 58 Q100 90 78 120" stroke={V.ok} strokeWidth="3" fill="none" /></g>),
+                bad: () => (<g><Ground /><FrontBody color={V.bad} /><path d="M78 50 Q88 70 92 88" stroke={V.bad} strokeWidth="3" fill="none" /><path d="M122 130 Q118 118 112 108" stroke={V.bad} strokeWidth="3" fill="none" /></g>)
+            },
+            thomas_hip_flexor: {
+                okLabel: 'Бедро на линии стола',
+                badLabel: 'Бедро выше горизонтали',
+                ok: () => (<g><line x1="30" y1="90" x2="130" y2="90" stroke={V.wall} strokeWidth="6" /><circle cx="48" cy="78" r="8" stroke={V.ok} strokeWidth="2.2" fill="none" /><line x1="56" y1="84" x2="88" y2="60" stroke={V.ink} strokeWidth="3" /><line x1="88" y1="90" x2="150" y2="90" stroke={V.ok} strokeWidth="3.2" /><line x1="150" y1="90" x2="154" y2="128" stroke={V.ink} strokeWidth="3" /></g>),
+                bad: () => (<g><line x1="30" y1="90" x2="130" y2="90" stroke={V.wall} strokeWidth="6" /><circle cx="48" cy="78" r="8" stroke={V.bad} strokeWidth="2.2" fill="none" /><line x1="56" y1="84" x2="88" y2="60" stroke={V.ink} strokeWidth="3" /><line x1="88" y1="90" x2="148" y2="70" stroke={V.bad} strokeWidth="3.2" /><line x1="148" y1="70" x2="158" y2="110" stroke={V.ink} strokeWidth="3" /></g>)
+            },
+            thomas_rectus: {
+                okLabel: 'Голень свисает ~90°',
+                badLabel: 'Колено разгибается',
+                ok: () => (<g><line x1="30" y1="90" x2="130" y2="90" stroke={V.wall} strokeWidth="6" /><circle cx="48" cy="78" r="8" stroke={V.ok} strokeWidth="2.2" fill="none" /><line x1="88" y1="90" x2="150" y2="90" stroke={V.ink} strokeWidth="3.2" /><line x1="150" y1="90" x2="154" y2="132" stroke={V.ok} strokeWidth="3.2" /></g>),
+                bad: () => (<g><line x1="30" y1="90" x2="130" y2="90" stroke={V.wall} strokeWidth="6" /><circle cx="48" cy="78" r="8" stroke={V.bad} strokeWidth="2.2" fill="none" /><line x1="88" y1="90" x2="150" y2="90" stroke={V.ink} strokeWidth="3.2" /><line x1="150" y1="90" x2="172" y2="102" stroke={V.bad} strokeWidth="3.2" /></g>)
+            },
+            thomas_tfl: {
+                okLabel: 'Бедро не уходит в сторону',
+                badLabel: 'Бедро в абдукции',
+                ok: () => (<g><line x1="40" y1="70" x2="160" y2="70" stroke={V.wall} strokeWidth="6" /><circle cx="100" cy="48" r="8" stroke={V.ink} strokeWidth="2.2" fill="none" /><line x1="100" y1="70" x2="100" y2="140" stroke={V.ok} strokeWidth="3.3" /></g>),
+                bad: () => (<g><line x1="40" y1="70" x2="160" y2="70" stroke={V.wall} strokeWidth="6" /><circle cx="100" cy="48" r="8" stroke={V.ink} strokeWidth="2.2" fill="none" /><line x1="100" y1="70" x2="138" y2="138" stroke={V.bad} strokeWidth="3.3" /></g>)
+            },
+            knee_wall_fail: {
+                okLabel: 'Колено достаёт, пятка в полу',
+                badLabel: 'Не достаёт или пятка отрывается',
+                ok: () => (<g><Ground /><WallV /><SideBody lean={0.35} ox={8} /><circle cx="158" cy="108" r="5" fill={V.ok} /></g>),
+                bad: () => (<g><Ground /><WallV /><SideBody lean={0.15} heel={0.8} ox={0} color={V.bad} /></g>)
+            },
+            aslr_fail: {
+                okLabel: 'Нога ≥ 80°',
+                badLabel: 'Угол меньше 80°',
+                ok: () => (<g><line x1="36" y1="120" x2="160" y2="120" stroke={V.ink} strokeWidth="3.2" /><circle cx="40" cy="118" r="8" stroke={V.ink} strokeWidth="2.2" fill="none" /><line x1="110" y1="120" x2="128" y2="42" stroke={V.ok} strokeWidth="3.3" /></g>),
+                bad: () => (<g><line x1="36" y1="120" x2="160" y2="120" stroke={V.ink} strokeWidth="3.2" /><circle cx="40" cy="118" r="8" stroke={V.ink} strokeWidth="2.2" fill="none" /><line x1="110" y1="120" x2="158" y2="78" stroke={V.bad} strokeWidth="3.3" /></g>)
+            }
+        };
+
+        const TestCompare = ({ id }) => {
+            const t = TEST_DIAGRAMS[id];
+            if (!t) return null;
+            return (
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                    <Schematic badge="ok" caption={t.okLabel}>{t.ok()}</Schematic>
+                    <Schematic badge="bad" caption={t.badLabel}>{t.bad()}</Schematic>
+                </div>
+            );
+        };
+
+        const MUSCLE_ZONES = {
+            upper_trap: [{ cx: 256, cy: 102, rx: 26, ry: 16 }, { cx: 214, cy: 122, rx: 20, ry: 12 }, { cx: 298, cy: 122, rx: 20, ry: 12 }],
+            levator: [{ cx: 256, cy: 96, rx: 18, ry: 14 }],
+            scm: [{ cx: 256, cy: 108, rx: 14, ry: 16 }],
+            pecs: [{ cx: 230, cy: 158, rx: 26, ry: 18 }, { cx: 282, cy: 158, rx: 26, ry: 18 }],
+            lats: [{ cx: 198, cy: 178, rx: 16, ry: 28 }, { cx: 314, cy: 178, rx: 16, ry: 28 }],
+            teres_major: [{ cx: 204, cy: 150, rx: 14, ry: 12 }, { cx: 308, cy: 150, rx: 14, ry: 12 }],
+            psoas: [{ cx: 240, cy: 248, rx: 14, ry: 20 }, { cx: 272, cy: 248, rx: 14, ry: 20 }],
+            rectus_femoris: [{ cx: 230, cy: 332, rx: 14, ry: 32 }, { cx: 282, cy: 332, rx: 14, ry: 32 }],
+            tfl: [{ cx: 208, cy: 276, rx: 13, ry: 16 }, { cx: 304, cy: 276, rx: 13, ry: 16 }],
+            adductors: [{ cx: 244, cy: 338, rx: 10, ry: 28 }, { cx: 268, cy: 338, rx: 10, ry: 28 }],
+            calves: [{ cx: 228, cy: 448, rx: 11, ry: 24 }, { cx: 284, cy: 448, rx: 11, ry: 24 }],
+            hamstrings: [{ cx: 224, cy: 342, rx: 13, ry: 30 }, { cx: 288, cy: 342, rx: 13, ry: 30 }],
+            erectors: [{ cx: 256, cy: 214, rx: 16, ry: 36 }],
+            abs: [{ cx: 256, cy: 208, rx: 30, ry: 26 }],
+            deep_neck_flexors: [{ cx: 256, cy: 110, rx: 12, ry: 14 }],
+            mid_trap: [{ cx: 256, cy: 146, rx: 38, ry: 14 }],
+            lower_trap: [{ cx: 256, cy: 168, rx: 32, ry: 12 }],
+            rhomboids: [{ cx: 256, cy: 152, rx: 26, ry: 14 }],
+            rotator_cuff: [{ cx: 200, cy: 142, rx: 14, ry: 14 }, { cx: 312, cy: 142, rx: 14, ry: 14 }],
+            glute_max: [{ cx: 232, cy: 278, rx: 20, ry: 16 }, { cx: 280, cy: 278, rx: 20, ry: 16 }],
+            glute_med: [{ cx: 210, cy: 268, rx: 14, ry: 14 }, { cx: 302, cy: 268, rx: 14, ry: 14 }],
+            core: [{ cx: 256, cy: 222, rx: 32, ry: 24 }],
+            tibialis: [{ cx: 232, cy: 428, rx: 9, ry: 22 }, { cx: 280, cy: 428, rx: 9, ry: 22 }]
+        };
+
+        // --- COMPONENTS ---
+
+        const Modal = ({ isOpen, onClose, title, children }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+                    <div className="bg-gray-800 rounded-xl border border-gray-700 shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-slide-up" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center p-6 border-b border-gray-700 sticky top-0 bg-gray-800 z-10">
+                            <h3 className="text-xl font-bold text-white">{title}</h3>
+                            <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+                                <i className="fa-solid fa-xmark text-2xl"></i>
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            {children}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const TestInfoContent = ({ howTo, whatToLookFor, testId, onClose }) => (
+            <div className="space-y-4">
+                <TestCompare id={testId} />
+                <div>
+                    <h4 className="text-orange-500 font-bold mb-2 uppercase text-sm">Как выполнять тест:</h4>
+                    <p className="text-gray-300 leading-relaxed">{howTo}</p>
+                </div>
+                <div className="bg-gray-700/50 p-4 rounded-lg border border-gray-600">
+                    <h4 className="text-teal-400 font-bold mb-2 uppercase text-sm flex items-center">
+                        <i className="fa-solid fa-magnifying-glass mr-2"></i> На что смотреть:
+                    </h4>
+                    <p className="text-gray-200 leading-relaxed">{whatToLookFor}</p>
+                </div>
+                <div className="flex justify-end mt-6">
+                    <button onClick={onClose} className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition-colors shadow-lg shadow-orange-500/20">
+                        Закрыть
+                    </button>
+                </div>
+            </div>
+        );
+
+        const CheckboxGroup = ({ title, items, values, onChange, onInfoClick }) => (
+            <div className="mb-6 bg-gray-800/50 p-4 rounded-lg border border-gray-700/50">
+                <h4 className="text-orange-500 font-semibold mb-3 uppercase text-sm tracking-wider">{title}</h4>
+                <div className="space-y-3">
+                    {items.map(item => (
+                        <div key={item.id} className="flex items-center justify-between group">
+                            <label className="flex items-center space-x-3 cursor-pointer flex-grow">
+                                <div className={`w-6 h-6 rounded border flex items-center justify-center transition-all ${values[item.id] ? 'bg-orange-500 border-orange-500' : 'border-gray-600 bg-gray-900 group-hover:border-orange-500/50'}`}>
+                                    {values[item.id] && <i className="fa-solid fa-check text-white text-sm"></i>}
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={!!values[item.id]}
+                                    onChange={() => onChange(item.id)}
+                                />
+                                <span className="text-gray-300 group-hover:text-white transition-colors">{item.label}</span>
+                            </label>
+                            {onInfoClick && (
+                                <button
+                                    onClick={() => onInfoClick(item)}
+                                    className="text-gray-500 hover:text-orange-400 transition-colors ml-2 p-1"
+                                >
+                                    <i className="fa-regular fa-circle-question"></i>
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        // --- STEPS ---
+
+        const StepIntro = ({ onStart }) => (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+                <div className="mb-8 relative">
+                    <div className="absolute -inset-4 bg-orange-500/20 blur-xl rounded-full"></div>
+                    <i className="fa-solid fa-person-rays text-6xl text-orange-500 relative z-10"></i>
+                </div>
+                <h1 className="text-5xl font-bold mb-2 text-white tracking-tight">
+                    ODA <span className="text-orange-500">PRO</span>
+                </h1>
+                <p className="text-xl text-gray-400 mb-10 font-light tracking-wide">Body Balance System</p>
+                <button
+                    onClick={onStart}
+                    className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-12 rounded-full shadow-lg shadow-orange-500/20 transition-all transform hover:scale-105 active:scale-95 text-lg"
+                >
+                    Начать диагностику
+                </button>
+            </div>
+        );
+
+        const StepSafety = ({ onNext }) => {
+            const [checks, setChecks] = useState({
+                pain: false,
+                trauma: false,
+                numbness: false
+            });
+
+            const hasRedFlag = Object.values(checks).some(Boolean);
+
+            return (
+                <div className="animate-fade-in max-w-2xl mx-auto">
+                    <h2 className="text-2xl font-bold mb-6 text-white">Скрининг безопасности</h2>
+                    <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8">
+                        <p className="text-gray-400 mb-6">Отметьте, если у клиента наблюдается что-либо из перечисленного:</p>
+                        <div className="space-y-4">
+                            {[
+                                { id: 'pain', label: 'Острая боль при движении' },
+                                { id: 'trauma', label: 'Недавние травмы или операции (< 6 мес)' },
+                                { id: 'numbness', label: 'Онемение конечностей или потеря чувствительности' }
+                            ].map(item => (
+                                <label key={item.id} className="flex items-center space-x-4 p-4 rounded-lg bg-gray-900/50 cursor-pointer hover:bg-gray-900 transition-colors border border-transparent hover:border-gray-600">
+                                    <div className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${checks[item.id] ? 'bg-red-500 border-red-500' : 'border-gray-600'}`}>
+                                        {checks[item.id] && <i className="fa-solid fa-check text-white text-sm"></i>}
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        className="hidden"
+                                        checked={checks[item.id]}
+                                        onChange={() => setChecks(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                                    />
+                                    <span className="text-gray-200">{item.label}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    {hasRedFlag ? (
+                        <div className="bg-red-500/10 border border-red-500/50 p-6 rounded-xl text-center animate-slide-up">
+                            <i className="fa-solid fa-triangle-exclamation text-4xl text-red-500 mb-4"></i>
+                            <h3 className="text-xl font-bold text-red-500 mb-2">Внимание!</h3>
+                            <p className="text-red-200">Наличие данных симптомов является противопоказанием к тренировкам. Рекомендуется направить клиента к врачу.</p>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={onNext}
+                            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all transform hover:translate-y-[-2px]"
+                        >
+                            Противопоказаний нет, продолжить
+                        </button>
+                    )}
+                </div>
+            );
+        };
+
+        const StepStatic = ({ data, updateData }) => {
+            const [infoModal, setInfoModal] = useState(null);
+
+            const groups = [
+                {
+                    title: "Голова и Плечи",
+                    items: [
+                        {
+                            id: 'forward_head',
+                            label: 'Голова выдвинута вперед',
+                            howTo: 'Попросите клиента встать боком к вам в привычной, расслабленной позе. Представьте вертикальную линию, проходящую через плечевой сустав.',
+                            whatToLookFor: 'Мочка уха находится спереди от этой линии. Шея визуально наклонена вперед.'
+                        },
+                        {
+                            id: 'rounded_shoulders',
+                            label: 'Округлые плечи',
+                            howTo: 'Оцените положение плеч сбоку и положение кистей рук в расслабленном состоянии.',
+                            whatToLookFor: 'Плечевой сустав смещен вперед относительно середины грудной клетки. Ладони развернуты назад (тыльной стороной вперед), а не к телу.'
+                        }
+                    ]
+                },
+                {
+                    title: "Таз и Позвоночник",
+                    items: [
+                        {
+                            id: 'hyperlordosis',
+                            label: 'Гиперлордоз (Передний наклон таза)',
+                            howTo: 'Посмотрите на поясничный изгиб сбоку. Оцените наклон таза.',
+                            whatToLookFor: 'Чрезмерный прогиб в пояснице. Живот выпячивается вперед, ягодицы отклянчены назад (передний наклон таза).'
+                        },
+                        {
+                            id: 'flat_back',
+                            label: 'Плоская спина (Задний наклон таза)',
+                            howTo: 'Оцените поясничный изгиб сбоку.',
+                            whatToLookFor: 'Поясница выглядит плоской, естественный прогиб отсутствует. Таз подкручен под себя (задний наклон).'
+                        }
+                    ]
+                },
+                {
+                    title: "Нижние конечности",
+                    items: [
+                        {
+                            id: 'knee_valgus_static',
+                            label: 'Вальгус коленей (X-образные)',
+                            howTo: 'Попросите клиента встать прямо, стопы вместе или на ширине таза. Посмотрите спереди.',
+                            whatToLookFor: 'Колени соприкасаются или стремятся друг к другу, образуя "X"-образную форму ног.'
+                        },
+                        {
+                            id: 'flat_feet',
+                            label: 'Плоскостопие / Пронация',
+                            howTo: 'Посмотрите на стопы сзади и с внутренней стороны.',
+                            whatToLookFor: 'Внутренний свод стопы опущен (касается пола). Ахиллово сухожилие искривлено внутрь.'
+                        }
+                    ]
+                }
+            ];
+
+            return (
+                <div className="animate-fade-in">
+                    <h2 className="text-2xl font-bold mb-6 text-white">Статическая оценка</h2>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        {groups.map((group, idx) => (
+                            <CheckboxGroup
+                                key={idx}
+                                title={group.title}
+                                items={group.items}
+                                values={data}
+                                onChange={(id) => updateData(id, !data[id])}
+                                onInfoClick={setInfoModal}
+                            />
+                        ))}
+                    </div>
+
+                    <Modal isOpen={!!infoModal} onClose={() => setInfoModal(null)} title={infoModal?.label}>
+                        <TestInfoContent
+                            howTo={infoModal?.howTo}
+                            whatToLookFor={infoModal?.whatToLookFor}
+                            testId={infoModal?.id}
+                            onClose={() => setInfoModal(null)}
+                        />
+                    </Modal>
+                </div>
+            );
+        };
+
+        const StepDynamic = ({ data, updateData }) => {
+            const [infoModal, setInfoModal] = useState(null);
+
+            const groups = [
+                {
+                    title: "Вид Спереди",
+                    items: [
+                        {
+                            id: 'feet_turn_out',
+                            label: 'Стопы разворачиваются наружу',
+                            howTo: 'Клиент выполняет приседание с руками над головой. Смотрите на стопы спереди.',
+                            whatToLookFor: 'Во время движения носки стоп разворачиваются наружу.'
+                        },
+                        {
+                            id: 'knees_cave_in',
+                            label: 'Колени сводятся внутрь (Вальгус)',
+                            howTo: 'Смотрите на колени спереди во время приседания.',
+                            whatToLookFor: 'Колени смещаются внутрь (к центру), выходя за линию второго пальца стопы.'
+                        }
+                    ]
+                },
+                {
+                    title: "Вид Сбоку",
+                    items: [
+                        {
+                            id: 'excessive_lean',
+                            label: 'Избыточный наклон вперед',
+                            howTo: 'Смотрите сбоку. Оцените параллельность линий голени и туловища.',
+                            whatToLookFor: 'Туловище наклоняется вперед чрезмерно, линии голени и корпуса не параллельны.'
+                        },
+                        {
+                            id: 'low_back_arch',
+                            label: 'Прогиб в пояснице',
+                            howTo: 'Смотрите на поясницу сбоку в нижней точке приседа.',
+                            whatToLookFor: 'Поясница чрезмерно прогибается (гиперэкстензия), таз уходит в передний наклон.'
+                        },
+                        {
+                            id: 'arms_fall',
+                            label: 'Руки падают вперед',
+                            howTo: 'Смотрите сбоку на положение рук относительно туловища.',
+                            whatToLookFor: 'Руки опускаются вперед и не составляют одну линию с туловищем/ушами.'
+                        }
+                    ]
+                },
+                {
+                    title: "Вид Сзади",
+                    items: [
+                        {
+                            id: 'heels_rise',
+                            label: 'Пятки отрываются от пола',
+                            howTo: 'Смотрите на пятки сзади или сбоку.',
+                            whatToLookFor: 'Пятки отрываются от пола в нижней фазе движения.'
+                        },
+                        {
+                            id: 'asym_shift',
+                            label: 'Асимметричное смещение таза',
+                            howTo: 'Смотрите сзади на таз во время приседания.',
+                            whatToLookFor: 'Таз смещается вправо или влево, вес переносится на одну ногу больше.'
+                        }
+                    ]
+                }
+            ];
+
+            return (
+                <div className="animate-fade-in">
+                    <h2 className="text-2xl font-bold mb-2 text-white">Динамическая оценка</h2>
+                    <p className="text-gray-400 mb-6">Тест: Приседания с руками над головой (OHSA)</p>
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {groups.map((group, idx) => (
+                            <CheckboxGroup
+                                key={idx}
+                                title={group.title}
+                                items={group.items}
+                                values={data}
+                                onChange={(id) => updateData(id, !data[id])}
+                                onInfoClick={setInfoModal}
+                            />
+                        ))}
+                    </div>
+
+                    <Modal isOpen={!!infoModal} onClose={() => setInfoModal(null)} title={infoModal?.label}>
+                        <TestInfoContent
+                            howTo={infoModal?.howTo}
+                            whatToLookFor={infoModal?.whatToLookFor}
+                            testId={infoModal?.id}
+                            onClose={() => setInfoModal(null)}
+                        />
+                    </Modal>
+                </div>
+            );
+        };
+
+        const StepMobility = ({ data, updateData }) => {
+            const [infoModal, setInfoModal] = useState(null);
+
+            const groups = [
+                {
+                    title: "Шея и Плечи",
+                    items: [
+                        {
+                            id: 'neck_restrict',
+                            label: 'Ограничение сгибания шеи (<45°)',
+                            howTo: 'Попросите клиента наклонить подбородок к груди, закрыв рот.',
+                            whatToLookFor: 'Подбородок не касается грудины. Ощущается натяжение или боль в задней части шеи.'
+                        },
+                        {
+                            id: 'apley_fail',
+                            label: 'Тест Эпли (Замок) - Неудача',
+                            howTo: 'Клиент пытается соединить руки за спиной (одна сверху, другая снизу).',
+                            whatToLookFor: 'Пальцы не соприкасаются. Разница между правой и левой стороной существенна.'
+                        }
+                    ]
+                },
+                {
+                    title: "Тазобедренный сустав (Тест Томаса)",
+                    items: [
+                        {
+                            id: 'thomas_hip_flexor',
+                            label: 'Бедро приподнято (Psoas)',
+                            howTo: 'Клиент лежит на краю кушетки, подтягивает одно колено к груди, вторая нога свисает.',
+                            whatToLookFor: 'Бедро свисающей ноги поднимается выше горизонтали (не касается поверхности).'
+                        },
+                        {
+                            id: 'thomas_rectus',
+                            label: 'Колено разогнуто (Rectus Femoris)',
+                            howTo: 'В том же положении (тест Томаса) оцените положение голени.',
+                            whatToLookFor: 'Голень не свисает вертикально (угол в колене больше 90 градусов, нога выпрямляется).'
+                        },
+                        {
+                            id: 'thomas_tfl',
+                            label: 'Бедро отводится (TFL)',
+                            howTo: 'В том же положении посмотрите, не уходит ли нога в сторону.',
+                            whatToLookFor: 'Бедро отклоняется наружу (абдукция).'
+                        }
+                    ]
+                },
+                {
+                    title: "Голеностоп и Бедро",
+                    items: [
+                        {
+                            id: 'knee_wall_fail',
+                            label: 'Тест колено-стена (<10см)',
+                            howTo: 'Клиент стоит лицом к стене, стопа на расстоянии 10-12 см. Пытается коснуться стены коленом, не отрывая пятку.',
+                            whatToLookFor: 'Колено не достает до стены или пятка отрывается от пола.'
+                        },
+                        {
+                            id: 'aslr_fail',
+                            label: 'Активный подъем ноги (<80°)',
+                            howTo: 'Клиент лежит на спине. Поднимает одну прямую ногу вверх.',
+                            whatToLookFor: 'Угол подъема ноги меньше 80 градусов (лодыжка не проходит линию середины бедра второй ноги).'
+                        }
+                    ]
+                }
+            ];
+
+            return (
+                <div className="animate-fade-in">
+                    <h2 className="text-2xl font-bold mb-6 text-white">Мобильность и Спец. тесты</h2>
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {groups.map((group, idx) => (
+                            <CheckboxGroup
+                                key={idx}
+                                title={group.title}
+                                items={group.items}
+                                values={data}
+                                onChange={(id) => updateData(id, !data[id])}
+                                onInfoClick={setInfoModal}
+                            />
+                        ))}
+                    </div>
+
+                    <Modal isOpen={!!infoModal} onClose={() => setInfoModal(null)} title={infoModal?.label}>
+                        <TestInfoContent
+                            howTo={infoModal?.howTo}
+                            whatToLookFor={infoModal?.whatToLookFor}
+                            testId={infoModal?.id}
+                            onClose={() => setInfoModal(null)}
+                        />
+                    </Modal>
+                </div>
+            );
+        };
+
+        // --- REPORT & LOGIC ---
+        // NASM CES: finding → overactive/underactive muscle → phase exercise.
+        // Syndromes are labels. The plan is muscle-driven.
+
+        const MUSCLES = {
+            upper_trap: { name: 'Верхняя трапеция', inhibit: 'smr_upper_trap', lengthen: 'stretch_neck_side' },
+            levator: { name: 'Лестничные / levator', inhibit: 'smr_upper_trap', lengthen: 'stretch_neck_side' },
+            scm: { name: 'ГКС мышца', lengthen: 'stretch_neck_side' },
+            pecs: { name: 'Грудные', inhibit: 'smr_pecs', lengthen: 'stretch_doorway_pec' },
+            lats: { name: 'Широчайшие', inhibit: 'smr_lats', lengthen: 'stretch_lats' },
+            teres_major: { name: 'Большая круглая', inhibit: 'smr_lats', lengthen: 'stretch_lats' },
+            psoas: { name: 'Подвздошно-поясничная', inhibit: 'smr_psoas', lengthen: 'stretch_hip_flexor', activate: 'act_bird_dog' },
+            rectus_femoris: { name: 'Прямая мышца бедра', inhibit: 'smr_quads', lengthen: 'stretch_quad_stand' },
+            tfl: { name: 'TFL', inhibit: 'smr_tfl', lengthen: 'stretch_hip_flexor' },
+            adductors: { name: 'Приводящие', inhibit: 'smr_adductors', lengthen: 'stretch_adductor_stand' },
+            calves: { name: 'Икроножные / камбаловидная', inhibit: 'smr_calves', lengthen: 'stretch_calf_wall' },
+            hamstrings: { name: 'Хамстринги', inhibit: 'smr_hamstrings', lengthen: 'stretch_hamstring_supine' },
+            erectors: { name: 'Разгибатели позвоночника', activate: 'act_bird_dog' },
+            abs: { name: 'Прямая мышца живота' },
+            deep_neck_flexors: { name: 'Глубокие сгибатели шеи', activate: 'act_chin_tuck' },
+            mid_trap: { name: 'Средняя/нижняя трапеция', activate: 'act_ytw' },
+            lower_trap: { name: 'Нижняя трапеция', activate: 'act_ytw' },
+            rhomboids: { name: 'Ромбовидные', activate: 'act_ytw' },
+            rotator_cuff: { name: 'Ротаторная манжета', activate: 'act_ytw' },
+            glute_max: { name: 'Большая ягодичная', activate: 'act_glute_bridge' },
+            glute_med: { name: 'Средняя ягодичная', activate: 'act_clamshell' },
+            core: { name: 'Глубокий кор', activate: 'act_plank_rkc' },
+            tibialis: { name: 'Передняя большеберцовая', activate: 'act_tibialis' }
+        };
+
+        const FINDING_MAP = {
+            forward_head: {
+                label: 'Голова выдвинута вперёд',
+                over: [['upper_trap', 2], ['levator', 2], ['scm', 1]],
+                under: [['deep_neck_flexors', 2]],
+                syn: { ucs: 2 }
+            },
+            rounded_shoulders: {
+                label: 'Округлые плечи',
+                over: [['pecs', 2], ['upper_trap', 1], ['lats', 1]],
+                under: [['mid_trap', 2], ['rhomboids', 2], ['lower_trap', 1]],
+                syn: { ucs: 2 }
+            },
+            arms_fall: {
+                label: 'Руки падают вперёд',
+                over: [['lats', 2], ['pecs', 2], ['teres_major', 1]],
+                under: [['mid_trap', 2], ['rhomboids', 1], ['rotator_cuff', 1]],
+                syn: { ucs: 2 }
+            },
+            neck_restrict: {
+                label: 'Ограничение сгибания шеи',
+                over: [['upper_trap', 2], ['levator', 2], ['scm', 1]],
+                under: [['deep_neck_flexors', 2]],
+                syn: { ucs: 3 }
+            },
+            apley_fail: {
+                label: 'Тест Эпли не пройден',
+                over: [['lats', 2], ['pecs', 2], ['teres_major', 1]],
+                under: [['rotator_cuff', 2], ['mid_trap', 1]],
+                syn: { ucs: 3 }
+            },
+            hyperlordosis: {
+                label: 'Гиперлордоз / передний наклон таза',
+                over: [['psoas', 2], ['rectus_femoris', 1], ['erectors', 1]],
+                under: [['glute_max', 2], ['core', 2]],
+                syn: { lcs: 2 }
+            },
+            flat_back: {
+                label: 'Плоская спина / задний наклон таза',
+                over: [['hamstrings', 2], ['abs', 1]],
+                under: [['erectors', 2], ['psoas', 1]],
+                syn: { lcs_b: 3 }
+            },
+            excessive_lean: {
+                label: 'Избыточный наклон вперёд',
+                over: [['calves', 2], ['psoas', 1], ['abs', 1]],
+                under: [['tibialis', 1], ['glute_max', 2], ['erectors', 1]],
+                syn: { lcs: 1, pds: 1 }
+            },
+            low_back_arch: {
+                label: 'Прогиб в пояснице в приседе',
+                over: [['psoas', 2], ['erectors', 1], ['lats', 1]],
+                under: [['glute_max', 2], ['core', 2], ['hamstrings', 1]],
+                syn: { lcs: 2 }
+            },
+            thomas_hip_flexor: {
+                label: 'Тест Томаса: psoas',
+                over: [['psoas', 3]],
+                under: [['glute_max', 2]],
+                syn: { lcs: 3 }
+            },
+            thomas_rectus: {
+                label: 'Тест Томаса: rectus femoris',
+                over: [['rectus_femoris', 3]],
+                under: [['glute_max', 1]],
+                syn: { lcs: 3 }
+            },
+            thomas_tfl: {
+                label: 'Тест Томаса: TFL',
+                over: [['tfl', 3]],
+                under: [['glute_med', 2]],
+                syn: { pds: 2, lcs: 1 }
+            },
+            aslr_fail: {
+                label: 'ASLR < 80°',
+                over: [['hamstrings', 3]],
+                under: [['core', 1]],
+                syn: { lcs_b: 2 }
+            },
+            knee_valgus_static: {
+                label: 'Вальгус коленей (статика)',
+                over: [['adductors', 2], ['tfl', 2]],
+                under: [['glute_med', 2], ['glute_max', 1]],
+                syn: { pds: 2 }
+            },
+            flat_feet: {
+                label: 'Плоскостопие / пронация',
+                over: [['calves', 2]],
+                under: [['tibialis', 2]],
+                syn: { pds: 2 }
+            },
+            feet_turn_out: {
+                label: 'Стопы разворачиваются наружу',
+                over: [['calves', 2], ['hamstrings', 1], ['tfl', 1]],
+                under: [['glute_med', 2], ['glute_max', 1]],
+                syn: { pds: 2 }
+            },
+            knees_cave_in: {
+                label: 'Колени сводятся в приседе',
+                over: [['adductors', 2], ['tfl', 2]],
+                under: [['glute_med', 3], ['glute_max', 1]],
+                syn: { pds: 2 }
+            },
+            heels_rise: {
+                label: 'Пятки отрываются от пола',
+                over: [['calves', 3]],
+                under: [['tibialis', 2]],
+                syn: { pds: 3 }
+            },
+            knee_wall_fail: {
+                label: 'Тест колено–стена не пройден',
+                over: [['calves', 3]],
+                under: [['tibialis', 2]],
+                syn: { pds: 3 }
+            },
+            asym_shift: {
+                label: 'Асимметричное смещение таза',
+                over: [['tfl', 2], ['adductors', 1]],
+                under: [['glute_med', 3]],
+                syn: { pds: 2, lcs: 1 }
+            }
+        };
+
+        const SYNDROME_META = {
+            ucs: { name: 'Верхний перекрестный синдром', desc: 'Дисбаланс мышц плечевого пояса и шеи.', max: 12, threshold: 3 },
+            lcs: { name: 'Нижний перекрестный синдром (передний наклон таза)', desc: 'Укороченные сгибатели бедра и разгибатели, слабые ягодицы и кор.', max: 13, threshold: 3 },
+            lcs_b: { name: 'Задний наклон таза / плоская спина', desc: 'Укороченные хамстринги, слабые разгибатели и сгибатели бедра.', max: 5, threshold: 3 },
+            pds: { name: 'Синдром пронационных искажений', desc: 'Нарушение биомеханики стоп, голени и коленей.', max: 19, threshold: 4 }
+        };
+
+        const PHASE_DOSE = {
+            inhibit: '30–60 сек на точку, 1–2 подхода',
+            lengthen: '30–45 сек, 2 подхода',
+            activate: '2 × 10–15',
+            integrate: '2 × 8–12'
+        };
+
+        const EXERCISE_DOSE = {
+            act_plank_rkc: '10–20 сек, 2–3 подхода',
+            act_chin_tuck: '10–15 повторений, пауза 2–3 сек',
+            int_single_leg_balance: '30–60 сек на ногу × 2',
+            act_bird_dog: '6–8 повторений на сторону',
+            smr_psoas: '30–45 сек, без давления на пульсацию'
+        };
+
+        const doseFor = (exId, phase) => EXERCISE_DOSE[exId] || PHASE_DOSE[phase];
+
+        const severityOf = (score, max) => {
+            const r = score / max;
+            if (r >= 0.65) return { id: 'high', label: 'выраженный' };
+            if (r >= 0.35) return { id: 'mid', label: 'умеренный' };
+            return { id: 'low', label: 'лёгкий' };
+        };
+
+        const resolveConflicts = (data) => {
+            const active = { ...data };
+            const notes = [];
+            if (active.hyperlordosis && active.flat_back) {
+                const ant = (active.low_back_arch ? 2 : 0) + (active.thomas_hip_flexor ? 3 : 0) + (active.thomas_rectus ? 3 : 0);
+                const post = active.aslr_fail ? 3 : 0;
+                if (ant >= post) {
+                    active.flat_back = false;
+                    notes.push('Конфликт таза: отмечены и гиперлордоз, и плоская спина. По сопутствующим тестам в расчёт взят передний наклон.');
+                } else {
+                    active.hyperlordosis = false;
+                    notes.push('Конфликт таза: по ASLR в расчёт взят задний наклон, гиперлордоз исключён.');
+                }
+            }
+            return { active, notes };
+        };
+
+        const pushRx = (bucket, exId, phase, score, why, muscleName) => {
+            if (!exId || !exerciseLibrary[exId]) return;
+            const existing = bucket.get(exId);
+            if (existing) {
+                existing.score += score;
+                why.forEach(w => existing.whySet.add(w));
+                if (muscleName) existing.muscles.add(muscleName);
+            } else {
+                bucket.set(exId, {
+                    id: exId,
+                    score,
+                    phase,
+                    dose: doseFor(exId, phase),
+                    whySet: new Set(why),
+                    muscles: new Set(muscleName ? [muscleName] : [])
+                });
+            }
+        };
+
+        const finalizeRx = (bucket, cap) =>
+            [...bucket.values()]
+                .sort((a, b) => b.score - a.score)
+                .slice(0, cap)
+                .map(item => ({
+                    id: item.id,
+                    dose: item.dose,
+                    score: item.score,
+                    why: [...item.whySet].join(', '),
+                    muscles: [...item.muscles].join(', ')
+                }));
+
+        const buildCorrectivePlan = (data) => {
+            const { active, notes } = resolveConflicts(data);
+            const triggered = Object.keys(FINDING_MAP).filter(id => active[id]);
+
+            const muscleState = {};
+            const synScores = { ucs: 0, lcs: 0, lcs_b: 0, pds: 0 };
+            const synFindings = { ucs: [], lcs: [], lcs_b: [], pds: [] };
+
+            const ensureMuscle = (id) => {
+                if (!muscleState[id]) muscleState[id] = { over: 0, under: 0, overWhy: [], underWhy: [] };
+                return muscleState[id];
+            };
+
+            triggered.forEach(fid => {
+                const f = FINDING_MAP[fid];
+                (f.over || []).forEach(([mid, w]) => {
+                    const m = ensureMuscle(mid);
+                    m.over += w;
+                    m.overWhy.push(f.label);
+                });
+                (f.under || []).forEach(([mid, w]) => {
+                    const m = ensureMuscle(mid);
+                    m.under += w;
+                    m.underWhy.push(f.label);
+                });
+                Object.entries(f.syn || {}).forEach(([sid, w]) => {
+                    if (fid === 'excessive_lean' && active.flat_back && !active.hyperlordosis && sid === 'lcs') return;
+                    synScores[sid] += w;
+                    synFindings[sid].push(f.label);
+                });
+            });
+
+            const overactive = [];
+            const underactive = [];
+            Object.entries(muscleState).forEach(([id, s]) => {
+                const net = s.over - s.under;
+                const meta = MUSCLES[id];
+                if (!meta) return;
+                if (net > 0 && s.over >= 2) {
+                    overactive.push({ id, name: meta.name, score: s.over, why: [...new Set(s.overWhy)], ...meta });
+                } else if (net < 0 && s.under >= 2) {
+                    underactive.push({ id, name: meta.name, score: s.under, why: [...new Set(s.underWhy)], ...meta });
+                } else if (net === 0 && s.over >= 2) {
+                    overactive.push({ id, name: meta.name, score: s.over, why: [...new Set(s.overWhy)], ...meta });
+                }
+            });
+            overactive.sort((a, b) => b.score - a.score);
+            underactive.sort((a, b) => b.score - a.score);
+
+            const inhibit = new Map();
+            const lengthen = new Map();
+            const activate = new Map();
+            const integrate = new Map();
+
+            overactive.forEach(m => {
+                pushRx(inhibit, m.inhibit, 'inhibit', m.score, m.why, m.name);
+                pushRx(lengthen, m.lengthen, 'lengthen', m.score, m.why, m.name);
+            });
+            underactive.forEach(m => {
+                pushRx(activate, m.activate, 'activate', m.score, m.why, m.name);
+            });
+
+            const addIntegrate = (exId, score, why) => pushRx(integrate, exId, 'integrate', score, why, null);
+            if (synScores.ucs >= SYNDROME_META.ucs.threshold) addIntegrate('int_single_arm_row', synScores.ucs, synFindings.ucs);
+            if (synScores.lcs >= SYNDROME_META.lcs.threshold) {
+                addIntegrate('int_squat_row', synScores.lcs, synFindings.lcs);
+                addIntegrate('int_lunge_rot', synScores.lcs - 1, synFindings.lcs);
+            }
+            if (synScores.lcs_b >= SYNDROME_META.lcs_b.threshold) addIntegrate('int_squat_row', synScores.lcs_b, synFindings.lcs_b);
+            if (synScores.pds >= SYNDROME_META.pds.threshold || active.asym_shift || active.knees_cave_in) {
+                addIntegrate('int_single_leg_balance', synScores.pds + (active.asym_shift ? 2 : 0), synFindings.pds);
+                addIntegrate('int_multi_lunge', synScores.pds, synFindings.pds);
+            }
+            if (integrate.size === 0 && (overactive.length || underactive.length)) {
+                if (overactive.some(m => ['upper_trap', 'pecs', 'lats'].includes(m.id))) addIntegrate('int_single_arm_row', 2, triggered.map(id => FINDING_MAP[id].label));
+                else addIntegrate('int_single_leg_balance', 2, triggered.map(id => FINDING_MAP[id].label));
+            }
+
+            const syndromes = Object.entries(SYNDROME_META)
+                .filter(([id, meta]) => synScores[id] >= meta.threshold)
+                .sort((a, b) => synScores[b[0]] - synScores[a[0]])
+                .map(([id, meta]) => {
+                    const score = synScores[id];
+                    const sev = severityOf(score, meta.max);
+                    return {
+                        id,
+                        name: meta.name,
+                        desc: meta.desc,
+                        score,
+                        max: meta.max,
+                        severity: sev.label,
+                        severityId: sev.id,
+                        findings: [...new Set(synFindings[id])]
+                    };
+                });
+
+            return {
+                triggered: triggered.map(id => ({ id, label: FINDING_MAP[id].label })),
+                notes,
+                syndromes,
+                overactive: overactive.map(m => ({ id: m.id, name: m.name, score: m.score })),
+                underactive: underactive.map(m => ({ id: m.id, name: m.name, score: m.score })),
+                plan: {
+                    inhibit: finalizeRx(inhibit, 4),
+                    lengthen: finalizeRx(lengthen, 4),
+                    activate: finalizeRx(activate, 3),
+                    integrate: finalizeRx(integrate, 2)
+                }
+            };
+        };
+
+        // --- BODY MAP COMPONENT ---
+
+        const BodyMap = ({ overactive = [], underactive = [] }) => {
+            const maxOver = Math.max(1, ...overactive.map(m => m.score));
+            const maxUnder = Math.max(1, ...underactive.map(m => m.score));
+            const topOver = overactive.slice(0, 3);
+
+            return (
+                <div className="flex flex-col items-center justify-center bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg h-full">
+                    <h3 className="text-xl font-bold text-white mb-4">Карта дисбалансов</h3>
+                    <div className="relative w-full max-w-[320px] aspect-square">
+                        <svg viewBox="0 0 512 512" className="w-full h-full drop-shadow-2xl" preserveAspectRatio="xMidYMid meet">
+                            <defs>
+                                <filter id="glow-over" x="-50%" y="-50%" width="200%" height="200%">
+                                    <feGaussianBlur stdDeviation="6" result="coloredBlur" />
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur" />
+                                        <feMergeNode in="SourceGraphic" />
+                                    </feMerge>
+                                </filter>
+                                <filter id="glow-under" x="-50%" y="-50%" width="200%" height="200%">
+                                    <feGaussianBlur stdDeviation="6" result="coloredBlur" />
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur" />
+                                        <feMergeNode in="SourceGraphic" />
+                                    </feMerge>
+                                </filter>
+                            </defs>
+                            <image href="body_anatomy.png" x="0" y="0" width="512" height="512" />
+                            {overactive.map(m => (MUSCLE_ZONES[m.id] || []).map((z, i) => (
+                                <ellipse
+                                    key={`o-${m.id}-${i}`}
+                                    cx={z.cx} cy={z.cy} rx={z.rx} ry={z.ry}
+                                    fill="rgba(249,115,22,0.55)"
+                                    opacity={0.35 + (m.score / maxOver) * 0.5}
+                                    filter="url(#glow-over)"
+                                />
+                            )))}
+                            {underactive.map(m => (MUSCLE_ZONES[m.id] || []).map((z, i) => (
+                                <ellipse
+                                    key={`u-${m.id}-${i}`}
+                                    cx={z.cx} cy={z.cy} rx={z.rx} ry={z.ry}
+                                    fill="rgba(45,212,191,0.5)"
+                                    opacity={0.3 + (m.score / maxUnder) * 0.45}
+                                    filter="url(#glow-under)"
+                                />
+                            )))}
+                        </svg>
+                    </div>
+                    {topOver.length > 0 && (
+                        <div className="flex flex-wrap justify-center gap-1.5 mt-3">
+                            {topOver.map(m => (
+                                <span key={m.id} className="text-[10px] bg-orange-500/90 text-white px-2 py-0.5 rounded">{m.name}</span>
+                            ))}
+                        </div>
+                    )}
+                    <div className="flex items-center justify-center gap-4 mt-3 text-xs text-gray-400">
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> укороченные</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-teal-400"></span> ослабленные</span>
+                    </div>
+                </div>
+            );
+        };
+
+        const ExerciseCard = ({ item, onClick }) => {
+            const ex = exerciseLibrary[item.id];
+            if (!ex) return null;
+            return (
+                <div
+                    onClick={() => onClick({ ...ex, id: item.id, dose: item.dose, why: item.why, muscles: item.muscles })}
+                    className="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-orange-500 cursor-pointer transition-all hover:shadow-lg hover:shadow-orange-500/10 group h-full flex flex-col print:border-gray-300 print:bg-white print:shadow-none print:h-auto print:block print:break-inside-avoid"
+                >
+                    <div className="mb-3 -mx-1 print:mx-0">
+                        <ExDiagram id={item.id} />
+                    </div>
+                    <h5 className="font-bold text-white mb-2 group-hover:text-orange-400 transition-colors print:text-black print:text-lg">{ex.name}</h5>
+                    <p className="text-sm text-gray-400 line-clamp-2 flex-grow print:text-gray-800 print:line-clamp-none">{ex.desc}</p>
+                    {item.dose && (
+                        <p className="text-xs text-orange-400/90 mt-3 font-medium print:text-orange-700">{item.dose}</p>
+                    )}
+                    {item.why && (
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-2 print:text-gray-600 print:line-clamp-none">Из-за: {item.why}</p>
+                    )}
+
+                    <div className="mt-3 text-xs text-orange-500 font-semibold uppercase tracking-wider flex items-center print:hidden">
+                        Подробнее <i className="fa-solid fa-arrow-right ml-2 transform group-hover:translate-x-1 transition-transform"></i>
+                    </div>
+
+                    <div className="hidden print:block mt-4 border-t border-gray-200 pt-4">
+                        <h6 className="font-bold text-black mb-2 text-sm">Техника выполнения:</h6>
+                        <ol className="list-decimal list-inside space-y-1 text-sm text-gray-800">
+                            {ex.steps.map((step, idx) => (
+                                <li key={idx}>{step}</li>
+                            ))}
+                        </ol>
+                    </div>
+                </div>
+            );
+        };
+
+        const ReportView = ({ data }) => {
+            const [selectedEx, setSelectedEx] = useState(null);
+            const result = useMemo(() => buildCorrectivePlan(data), [data]);
+            const { syndromes, plan, overactive, underactive, notes, triggered } = result;
+            const hasPlan = ['inhibit', 'lengthen', 'activate', 'integrate'].some(p => plan[p].length > 0);
+
+            const phases = [
+                { id: 'inhibit', title: '1. Ингибиция (МФР)', icon: 'fa-solid fa-compress', desc: 'Только мышцы, набравшие вес по находкам' },
+                { id: 'lengthen', title: '2. Удлинение (Растяжка)', icon: 'fa-solid fa-up-right-and-down-left-from-center', desc: 'Укороченные мышцы из того же списка' },
+                { id: 'activate', title: '3. Активация', icon: 'fa-solid fa-bolt', desc: 'Ослабленные антагонисты' },
+                { id: 'integrate', title: '4. Интеграция', icon: 'fa-solid fa-person-running', desc: '1–2 паттерна под ведущий синдром' }
+            ];
+
+            const sevColor = { high: 'bg-red-500', mid: 'bg-orange-500', low: 'bg-yellow-500' };
+
+            return (
+                <div className="animate-fade-in pb-20">
+                    <div className="flex justify-between items-end mb-8 no-print">
+                        <div>
+                            <h2 className="text-3xl font-bold text-white mb-2">Результаты диагностики</h2>
+                            <p className="text-gray-400">План собран по мышцам, не по синдрому целиком</p>
+                        </div>
+                        <button
+                            onClick={() => window.print()}
+                            className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+                        >
+                            <i className="fa-solid fa-print mr-2"></i> Сохранить PDF
+                        </button>
+                    </div>
+
+                    <div className="hidden print-only mb-8 border-b border-gray-300 pb-4">
+                        <h1 className="text-2xl font-bold text-black">ODA PRO: Отчет о диагностике</h1>
+                        <p className="text-gray-600">Дата: {new Date().toLocaleDateString()}</p>
+                    </div>
+
+                    {!hasPlan ? (
+                        <div className="bg-green-500/10 border border-green-500/50 p-8 rounded-xl text-center mb-10">
+                            <i className="fa-solid fa-medal text-5xl text-green-500 mb-4"></i>
+                            <h3 className="text-2xl font-bold text-green-500 mb-2">Отличный результат!</h3>
+                            <p className="text-green-100">Значимых биомеханических нарушений не выявлено. Рекомендуется общая программа физической подготовки.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="grid lg:grid-cols-3 gap-8 mb-10">
+                                <div className="lg:col-span-1">
+                                    <BodyMap overactive={overactive} underactive={underactive} />
+                                </div>
+
+                                <div className="lg:col-span-2 space-y-4">
+                                    {syndromes.length === 0 && (
+                                        <div className="bg-gray-800 p-6 rounded-xl border-l-4 border-gray-500">
+                                            <h3 className="text-lg font-bold text-white mb-1">Синдром не набран</h3>
+                                            <p className="text-gray-400 text-sm">Находок мало для кластера, план всё равно собран по конкретным мышцам.</p>
+                                        </div>
+                                    )}
+                                    {syndromes.map(syn => (
+                                        <div key={syn.id} className="bg-gray-800 p-6 rounded-xl border-l-4 border-orange-500 shadow-lg card">
+                                            <div className="flex items-start justify-between gap-4 mb-2">
+                                                <h3 className="text-xl font-bold text-white">{syn.name}</h3>
+                                                <span className={`text-xs font-bold uppercase tracking-wide px-2 py-1 rounded text-white ${sevColor[syn.severityId]}`}>
+                                                    {syn.severity}
+                                                </span>
+                                            </div>
+                                            <p className="text-gray-400 text-sm mb-3">{syn.desc}</p>
+                                            <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden mb-3">
+                                                <div className="h-full bg-orange-500" style={{ width: `${Math.min(100, (syn.score / syn.max) * 100)}%` }}></div>
+                                            </div>
+                                            <p className="text-xs text-gray-500">Вес {syn.score}/{syn.max}. Опора: {syn.findings.join('; ')}</p>
+                                        </div>
+                                    ))}
+
+                                    {notes.map((n, i) => (
+                                        <div key={i} className="bg-yellow-500/10 border border-yellow-500/40 text-yellow-200 text-sm p-4 rounded-xl">
+                                            {n}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-4 mb-10">
+                                <div className="bg-gray-800/70 p-5 rounded-xl border border-gray-700">
+                                    <h4 className="text-orange-500 font-bold uppercase text-xs tracking-wider mb-3">Гиперактивные / укороченные</h4>
+                                    {overactive.length === 0 ? (
+                                        <p className="text-gray-500 text-sm">Не выделены</p>
+                                    ) : (
+                                        <ul className="space-y-1 text-sm text-gray-300">
+                                            {overactive.map(m => (
+                                                <li key={m.id} className="flex justify-between">
+                                                    <span>{m.name}</span>
+                                                    <span className="text-gray-500">{m.score}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                                <div className="bg-gray-800/70 p-5 rounded-xl border border-gray-700">
+                                    <h4 className="text-teal-400 font-bold uppercase text-xs tracking-wider mb-3">Ослабленные</h4>
+                                    {underactive.length === 0 ? (
+                                        <p className="text-gray-500 text-sm">Не выделены</p>
+                                    ) : (
+                                        <ul className="space-y-1 text-sm text-gray-300">
+                                            {underactive.map(m => (
+                                                <li key={m.id} className="flex justify-between">
+                                                    <span>{m.name}</span>
+                                                    <span className="text-gray-500">{m.score}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            </div>
+
+                            {triggered.length > 0 && (
+                                <p className="text-xs text-gray-500 mb-8">
+                                    Учтено находок: {triggered.map(t => t.label).join(' · ')}
+                                </p>
+                            )}
+
+                            <div className="space-y-10">
+                                {phases.map(phase => {
+                                    const items = plan[phase.id];
+                                    if (!items.length) return null;
+
+                                    return (
+                                        <div key={phase.id} className="card">
+                                            <div className="flex items-center mb-6 border-b border-gray-700 pb-2">
+                                                <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center mr-4 text-white">
+                                                    <i className={phase.icon}></i>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-white">{phase.title}</h3>
+                                                    <p className="text-sm text-gray-500">{phase.desc}</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-1 print:gap-6">
+                                                {items.map(item => (
+                                                    <ExerciseCard key={item.id} item={item} onClick={setSelectedEx} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
+
+                    <Modal isOpen={!!selectedEx} onClose={() => setSelectedEx(null)} title={selectedEx?.name}>
+                        <div className="space-y-6">
+                            {selectedEx?.id && <ExDiagram id={selectedEx.id} />}
+                            <p className="text-gray-300 text-lg leading-relaxed">{selectedEx?.desc}</p>
+                            {selectedEx?.dose && (
+                                <p className="text-orange-400 font-semibold">{selectedEx.dose}</p>
+                            )}
+                            {selectedEx?.muscles && (
+                                <p className="text-sm text-gray-400">Мышцы: {selectedEx.muscles}</p>
+                            )}
+                            {selectedEx?.why && (
+                                <p className="text-sm text-gray-500">На основании: {selectedEx.why}</p>
+                            )}
+
+                            <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+                                <h4 className="text-orange-500 font-bold mb-4 uppercase text-sm tracking-wider">Техника выполнения</h4>
+                                <ol className="space-y-4">
+                                    {selectedEx?.steps.map((step, idx) => (
+                                        <li key={idx} className="flex">
+                                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-orange-500 font-bold text-sm mr-4">
+                                                {idx + 1}
+                                            </span>
+                                            <span className="text-gray-200 mt-1">{step}</span>
+                                        </li>
+                                    ))}
+                                </ol>
+                            </div>
+                        </div>
+                    </Modal>
+
+                    <footer className="mt-20 text-center text-gray-600 text-sm print-only">
+                        <p>Сгенерировано системой ODA PRO Body Balance</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        // --- APP SHELL ---
+
+        const App = () => {
+            const [step, setStep] = useState(0);
+            const [data, setData] = useState({});
+
+            const updateData = (key, value) => {
+                setData(prev => ({ ...prev, [key]: value }));
+            };
+
+            const nextStep = () => setStep(s => s + 1);
+            const prevStep = () => setStep(s => s - 1);
+
+            const steps = [
+                { id: 'intro', component: <StepIntro onStart={nextStep} /> },
+                { id: 'safety', component: <StepSafety onNext={nextStep} /> },
+                { id: 'static', title: 'Шаг 1: Статика', component: <StepStatic data={data} updateData={updateData} /> },
+                { id: 'dynamic', title: 'Шаг 2: Динамика', component: <StepDynamic data={data} updateData={updateData} /> },
+                { id: 'mobility', title: 'Шаг 3: Мобильность', component: <StepMobility data={data} updateData={updateData} /> },
+                { id: 'report', title: 'Отчет', component: <ReportView data={data} /> }
+            ];
+
+            const currentStepObj = steps[step];
+            const isWizard = step > 1 && step < steps.length - 1;
+
+            return (
+                <div className="container mx-auto px-4 py-8 min-h-screen flex flex-col">
+                    {/* Header / Progress */}
+                    {step > 0 && (
+                        <div className="mb-8 no-print">
+                            <div className="flex justify-between items-center mb-4">
+                                <button
+                                    onClick={prevStep}
+                                    className="text-gray-400 hover:text-white transition-colors flex items-center"
+                                >
+                                    <i className="fa-solid fa-arrow-left mr-2"></i> Назад
+                                </button>
+                                {isWizard && (
+                                    <span className="text-gray-500 font-mono text-sm">
+                                        {step - 1} / 3
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Progress Bar */}
+                            {isWizard && (
+                                <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-orange-500 transition-all duration-500 ease-out"
+                                        style={{ width: `${((step - 1) / 3) * 100}%` }}
+                                    ></div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Main Content */}
+                    <main className="flex-grow">
+                        {currentStepObj.component}
+                    </main>
+
+                    {/* Wizard Navigation */}
+                    {isWizard && (
+                        <div className="mt-8 flex justify-end no-print">
+                            <button
+                                onClick={nextStep}
+                                className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg shadow-orange-500/20 transition-all flex items-center"
+                            >
+                                Далее <i className="fa-solid fa-arrow-right ml-2"></i>
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Footer */}
+                    <footer className="mt-12 py-6 border-t border-gray-800 text-center text-gray-600 text-sm no-print">
+                        <p>ODA PRO: Body Balance System &copy; 2026</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        try {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        } catch (e) {
+            console.error(e);
+            document.body.innerHTML = '<div style="color:red; padding:20px; background:white; z-index:9999; position:relative;"><h1>Render Error</h1><pre>' + e.stack + '</pre></div>';
+        }
+    </script>
+</body>
+
+</html>
